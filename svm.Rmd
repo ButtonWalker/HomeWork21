@@ -1,0 +1,111 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.0'
+      jupytext_version: 1.0.4
+  kernel_info:
+    name: dev
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---
+
+```{python}
+import pandas as pd
+```
+
+# Read the CSV and Perform Basic Data Cleaning
+
+```{python}
+df = pd.read_csv("cumulative.csv")
+df = df.drop(columns=["rowid", "kepid", "kepoi_name", "kepler_name", "koi_pdisposition", "koi_score", "koi_tce_delivname"])
+# Drop the null columns where all values are null
+df = df.dropna(axis='columns', how='all')
+# Drop the null rows
+df = df.dropna()
+df.head()
+```
+
+# Create a Train Test Split
+
+Use `koi_disposition` for the y values
+
+```{python}
+#import dependencies
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, MinMaxScaler
+
+
+#assign x and y values
+X = df.drop("koi_disposition", axis=1)
+y = df["koi_disposition"]
+
+#split training and testing data
+X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=115, stratify=y)
+```
+
+```{python}
+X_train.head()
+```
+
+# Pre-processing
+
+Scale the data using the MinMaxScaler
+
+```{python}
+X_scaler = MinMaxScaler().fit(X_train)
+X_train_scaled = X_scaler.transform(X_train)
+X_test_scaled = X_scaler.transform(X_test)
+```
+
+# Train the Support Vector Machine
+
+```{python}
+ # Support vector machine linear classifier
+from sklearn.svm import SVC 
+model = SVC(kernel='linear')
+model.fit(X_train_scaled, y_train)
+predictions = model.predict(X_test)
+```
+
+```{python}
+ SVC(C=1.0, cache_size=200, class_weight=None, coef0=0.0,
+  decision_function_shape='ovr', degree=3, gamma='auto', kernel='linear',
+  max_iter=-1, probability=False, random_state=None, shrinking=True,
+  tol=0.001, verbose=False)
+```
+
+```{python}
+print(f"Training Data Score: {model.score(X_train_scaled, y_train)}")
+print(f"Testing Data Score: {model.score(X_test_scaled, y_test)}")
+```
+
+# Hyperparameter Tuning
+
+Use `GridSearchCV` to tune the `C` and `gamma` parameters
+
+```{python}
+# Create the GridSearchCV model
+from sklearn.model_selection import GridSearchCV
+param_grid = {'C': [1, 5, 10, 50],
+              'gamma': [0.0001, 0.0005, 0.001, 0.005]}
+grid = GridSearchCV(model, param_grid, verbose=3, cv=5)
+```
+
+```{python}
+# Train the model with GridSearch
+grid.fit(X_train_scaled, y_train)
+```
+
+```{python}
+print(grid.best_params_)
+print(grid.best_score_)
+```
+
+```{python}
+
+```
